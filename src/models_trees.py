@@ -8,21 +8,18 @@ Models:
 """
 
 from sklearn.tree import DecisionTreeRegressor
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 
 from src.evaluate import load_data, cv_rmsle, save_result
 from src.features import build_features
 
 
 def run_decision_tree():
-    # Load data
     train, test = load_data()
 
-    # Build features
     X = build_features(train)
     y = train["count"]
 
-    # Decision Tree
     model = DecisionTreeRegressor(
         random_state=42
     )
@@ -40,14 +37,11 @@ def run_decision_tree():
 
 
 def run_random_forest():
-    # Load data
     train, test = load_data()
 
-    # Build features
     X = build_features(train)
     y = train["count"]
 
-    # Random Forest
     model = RandomForestRegressor(
         n_estimators=200,
         random_state=42,
@@ -66,6 +60,32 @@ def run_random_forest():
     save_result("random_forest", score)
 
 
+def run_gradient_boosting():
+    train, test = load_data()
+
+    X = build_features(train)
+    y = train["count"]
+
+    model = GradientBoostingRegressor(
+        n_estimators=200,
+        learning_rate=0.05,
+        max_depth=3,
+        random_state=42
+    )
+
+    score = cv_rmsle(
+        model,
+        X,
+        y,
+        log_target=True
+    )
+
+    print(f"Gradient Boosting CV RMSLE: {score:.4f}")
+
+    save_result("gradient_boosting", score)
+
+
 if __name__ == "__main__":
     run_decision_tree()
     run_random_forest()
+    run_gradient_boosting()
