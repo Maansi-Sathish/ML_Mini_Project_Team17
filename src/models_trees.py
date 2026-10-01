@@ -21,6 +21,9 @@ def run_decision_tree():
     y = train["count"]
 
     model = DecisionTreeRegressor(
+        max_depth=None,
+        min_samples_split=5,
+        min_samples_leaf=5,
         random_state=42
     )
 
@@ -44,6 +47,10 @@ def run_random_forest():
 
     model = RandomForestRegressor(
         n_estimators=200,
+        max_depth=None,
+        min_samples_split=2,
+        min_samples_leaf=1,
+        max_features=1.0,
         random_state=42,
         n_jobs=-1
     )
@@ -67,9 +74,11 @@ def run_gradient_boosting():
     y = train["count"]
 
     model = GradientBoostingRegressor(
-        n_estimators=200,
-        learning_rate=0.05,
-        max_depth=3,
+        n_estimators=300,
+        learning_rate=0.1,
+        max_depth=4,
+        min_samples_split=5,
+        min_samples_leaf=2,
         random_state=42
     )
 
