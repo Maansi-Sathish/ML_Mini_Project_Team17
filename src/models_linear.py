@@ -8,6 +8,7 @@ Each model writes results/<name>.csv and predictions/<name>.csv.
 """
 import argparse
 import itertools
+import time
 import warnings
 
 import numpy as np
@@ -36,9 +37,13 @@ class PoissonElasticNet(BaseEstimator, RegressorMixin):
     Outer loop = IRLS (Newton) for the Poisson likelihood; inner step = weighted
     sklearn ElasticNet on the working response. Fits on RAW counts, standardises
     features internally, intercept unpenalised. l1_wt=1 -> lasso, 0 -> ridge.
+
+    Speed settings: IRLS usually converges in 5-7 steps, so max_iter=10 with an
+    early stop is enough; the inner ElasticNet is warm-started from the previous
+    IRLS step and uses tol=1e-4 / max_iter=500 (tol=1e-6 / 2000 was the slow part).
     """
 
-    def __init__(self, alpha=1e-3, l1_wt=0.5, max_iter=25, tol=1e-5):
+    def __init__(self, alpha=1e-3, l1_wt=0.5, max_iter=10, tol=1e-3):
         self.alpha = alpha
         self.l1_wt = l1_wt
         self.max_iter = max_iter
@@ -55,17 +60,22 @@ class PoissonElasticNet(BaseEstimator, RegressorMixin):
         Z = self._scale(Xa)
         eta = np.full(len(y), np.log(y.mean() + 1e-6))
         b0, coef = eta[0], np.zeros(Z.shape[1])
+
+        # one ElasticNet object reused for every IRLS step; warm_start keeps the
+        # previous coefficients as the starting point of the next step
+        en = ElasticNet(alpha=self.alpha, l1_ratio=max(self.l1_wt, 1e-3),
+                        max_iter=500, tol=1e-4, warm_start=True)
+        self.n_iter_ = 0
         for _ in range(self.max_iter):
             mu = np.exp(eta)
             z = eta + (y - mu) / mu                       # working response
-            en = ElasticNet(alpha=self.alpha, l1_ratio=max(self.l1_wt, 1e-3),
-                            max_iter=2000, tol=1e-6)
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore", ConvergenceWarning)
                 en.fit(Z, z, sample_weight=mu)            # weights = mu (Poisson)
             new_eta = np.clip(en.predict(Z), -5, 10)
             delta = np.max(np.abs(new_eta - eta))
-            eta, b0, coef = new_eta, en.intercept_, en.coef_
+            eta, b0, coef = new_eta, en.intercept_, en.coef_.copy()
+            self.n_iter_ += 1
             if delta < self.tol:
                 break
         self.intercept_, self.coef_ = b0, coef
@@ -133,14 +143,17 @@ def main():
     y = train["count"].values
 
     for name in args.models.split(","):
+        t0 = time.perf_counter()
         if args.tune and name in TUNE_GRIDS:
             BEST_PARAMS[name].update(tune(name, X, y))
         factory, log_target = MODEL_REGISTRY[name]
         model = factory()
         score = cv_rmsle(model, X, y, log_target)
-        print(f"{name}: CV RMSLE = {score:.4f}")
+        print(f"{name}: CV RMSLE = {score:.4f}  (CV took {time.perf_counter() - t0:.0f}s)", flush=True)
         save_result(name, score)
+        t1 = time.perf_counter()
         save_predictions(name, test["datetime"], fit_predict_test(model, X, y, X_test, log_target))
+        print(f"{name}: final fit + predictions took {time.perf_counter() - t1:.0f}s", flush=True)
 
 
 if __name__ == "__main__":
