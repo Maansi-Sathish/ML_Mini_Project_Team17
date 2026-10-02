@@ -5,6 +5,7 @@ Runs:
 1. Tree-based model evaluation
 2. Linear / kernel models (linear, Poisson GLM, PCR, SVR)
 3. Final test-set prediction generation
+4. Final comparison table and bar chart of all models (results/summary/)
 
 Usage:
     python main.py                # run everything
@@ -23,6 +24,7 @@ from src.models_trees import (
 )
 
 from src.predict import generate_predictions
+from src.compare import compare_models
 
 ROOT = Path(__file__).resolve().parent
 
@@ -57,6 +59,10 @@ def main():
     print("\n[3] Generating final test-set predictions...")
 
     generate_predictions()
+
+    print("\n[4] Comparing all models...")
+
+    compare_models()
 
     print("\n" + "=" * 60)
     print("PIPELINE COMPLETED SUCCESSFULLY")

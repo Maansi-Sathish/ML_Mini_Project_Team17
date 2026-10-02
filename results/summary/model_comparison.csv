@@ -1,0 +1,9 @@
+model,cv_rmsle
+gradient_boosting,0.3063
+stacking_ensemble,0.311
+random_forest,0.3214
+svr,0.322
+decision_tree,0.4105
+pcr,0.5076
+linear,0.5076
+poisson,0.553
