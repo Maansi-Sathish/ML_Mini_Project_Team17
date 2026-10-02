@@ -1,0 +1,5 @@
+approach,cv_rmsle,cv_std
+total count (one model),0.28282,0.00588
+casual + registered (two models),0.27839,0.00545
+casual only,0.4678,0.01
+registered only,0.27821,0.00592
